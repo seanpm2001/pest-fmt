@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     if cli.stdin {
         let mut source = String::new();
         std::io::stdin().read_to_string(&mut source).expect("failed read source from stdin");
-        println!("{}", source);
+        println!("{}", format(&source).unwrap_or_else(|e| panic!("failed to format: {:?}", e)));
     } else {
         process_files(cli.file)?;
     }

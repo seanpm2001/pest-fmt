@@ -25,10 +25,25 @@ jobs:
           key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
         run: cargo build
-      - name: Tests
+      - name: Test
         run: cargo test
-      - name: Test Cli
-        run: make test
+  cli_test:
+    name: CLI Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup | Cache Cargo
+        uses: actions/cache@v3.2.6
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Run CLI Test
+        run: ./tests/cli_test.sh
   lint:
     name: Lint
     runs-on: ubuntu-latest

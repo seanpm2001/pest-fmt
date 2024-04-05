@@ -438,4 +438,24 @@ mod tests {
             "#,
         }
     }
+
+    #[test]
+    fn test_tailing_comments() {
+        expect_correction! {
+            r#"
+            number = {
+                "-"? ~  // sign
+              ("0" | '1'..'9' ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? ~  // fraction
+              "E"|"e" ~ ("+" | "-")? ~ASCII_DIGIT* // exponent
+            }
+            "#,
+            r#"
+            number = {
+                "-"? ~  // sign
+              ("0" | '1'..'9' ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? ~  // fraction
+              "E"|"e" ~ ("+" | "-")? ~ASCII_DIGIT* // exponent
+            }
+            "#,
+        }
+    }
 }

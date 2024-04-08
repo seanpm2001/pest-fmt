@@ -45,8 +45,6 @@ impl Formatter<'_> {
     }
 
     fn group_output(&self, nodes: Vec<Node>) -> String {
-        // println!("------ nodes: {:?}", nodes);
-
         let hardbreak = Node::Str("".to_string());
 
         let mut groups = vec![];
@@ -135,8 +133,17 @@ impl Formatter<'_> {
 
         let start_line = pair.as_span().start_pos().line_col().0;
         let end_line = pair.as_span().end_pos().line_col().0;
+        let mut inner = pair.into_inner();
+        let mut last_comment: Option<String> = None;
 
-        for pair in pair.into_inner() {
+        while let Some(pair) = inner.next() {
+            // ensure new line after comment
+            if last_comment.is_some() {
+                if !code.ends_with('\n') {
+                    code.push('\n');
+                }
+            }
+
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
                 Rule::assignment_operator => continue,
@@ -149,33 +156,33 @@ impl Formatter<'_> {
                 Rule::compound_atomic_modifier => modifier = pair.as_str().to_string(),
                 Rule::expression => match self.format_expression(pair) {
                     Ok(parts) => {
-                        if start_line == end_line {
-                            code.push(' ');
-                            code.push_str(&parts.join(" | "));
-                            code.push(' ');
-                        } else {
-                            code.push_str("\n  ");
+                        if parts.len() > 0 {
+                            if start_line == end_line {
+                                code.push(' ');
+                                code.push_str(&parts.join(" | "));
+                                code.push(' ');
+                            } else {
+                                code.push('\n');
+                                code.push_str("  ");
 
-                            let mut expr_code = parts.join("\n| ");
-                            // Remove leading whitespace: " |" to "|"
-                            expr_code = expr_code.split('\n').map(|part| part.trim()).collect::<Vec<_>>().join("\n");
+                                let mut expr_code = dbg!(parts).join("\n| ");
+                                // Remove leading whitespace: " |" to "|"
+                                expr_code = expr_code.split('\n').map(|part| part.trim()).collect::<Vec<_>>().join("\n");
 
-                            code.push_str(&indent(expr_code, 2));
+                                code.push_str(&indent(expr_code, 2));
+                            }
                         }
                     }
                     Err(e) => return Err(e),
                 },
                 Rule::COMMENT => {
-                    let comment = self.format_comment(pair);
-
-                    if start_line == end_line {
-                        code.push(' ');
-                    } else {
+                    if !code.ends_with('\n') {
                         code.push('\n');
-                        code.push_str(&" ".repeat(4));
                     }
-
+                    let comment = self.format_comment(pair);
+                    code.push_str("    ");
                     code.push_str(&comment);
+                    last_comment = Some(comment);
                 }
                 Rule::line_doc => {
                     return Ok(Node::LineDoc(self.format_line_doc(pair, "///")));
@@ -188,10 +195,10 @@ impl Formatter<'_> {
         Ok(Node::Rule(GrammarRule { identifier, modifier, code, lines: (start_line, end_line) }))
     }
 
-    fn format_expression(&self, pairs: Pair<Rule>) -> PestResult<Vec<String>> {
+    fn format_expression(&self, pair: Pair<Rule>) -> PestResult<Vec<String>> {
         let mut code = vec![];
         let mut term = String::new();
-        for pair in pairs.into_inner() {
+        for pair in pair.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
                 Rule::COMMENT => {
@@ -221,7 +228,7 @@ impl Formatter<'_> {
             };
         }
         code.push(term.clone());
-        Ok(code)
+        Ok(dbg!(code))
     }
 
     fn format_term(&self, pairs: Pair<Rule>) -> PestResult<String> {
@@ -445,15 +452,17 @@ mod tests {
             r#"
             number = {
                 "-"? ~  // sign
-              ("0" | '1'..'9' ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? ~  // fraction
-              "E"|"e" ~ ("+" | "-")? ~ASCII_DIGIT* // exponent
+                ("0" | '1'..'9' ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? ~  // fraction
+                "E"|"e" ~ ("+" | "-")? ~ASCII_DIGIT* // exponent
             }
             "#,
             r#"
             number = {
                 "-"? ~  // sign
               ("0" | '1'..'9' ~ ASCII_DIGIT*) ~ ("." ~ ASCII_DIGIT*)? ~  // fraction
-              "E"|"e" ~ ("+" | "-")? ~ASCII_DIGIT* // exponent
+              "E"
+              | "e" ~ ("+" | "-")? ~ ASCII_DIGIT*
+                // exponent
             }
             "#,
         }

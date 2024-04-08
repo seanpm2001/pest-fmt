@@ -84,7 +84,7 @@ mod tests {
             /// comment1
             /// comment2
             a = { "a" }
-            
+
             /// comment3
             "#,
         };
@@ -110,7 +110,7 @@ mod tests {
             r#"
             //comment0
             a = { "a" // comment1
-                 ~ 
+                 ~
                  "b" //comment2
                  //comment2.1
             ~ "c" //comment3
@@ -136,7 +136,7 @@ mod tests {
             r#"
             /*comment1*/
             a = { "a" }
-            
+
             /*comment1
             comment2*/
             b = { "b" }
